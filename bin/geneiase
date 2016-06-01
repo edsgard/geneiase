@@ -1,0 +1,121 @@
+#!/usr/bin/env Rscript
+#./geneiase -t static -i mydata.tab
+
+###
+#Get opt
+###
+library('getopt')
+
+argv = commandArgs(trailingOnly = F)  
+scriptPath = dirname(sub("--file=", "", argv[grep("--file", argv)]))
+#print(scriptPath)
+#source(file.path(scriptPath, '../lib/getopt.R')) #Copied from library('getopt'), to avoid dependency on installed R packages: install.packages('getopt')
+argv = commandArgs(trailingOnly = T)
+
+spec = matrix(c(
+  'ase.type', 't', 1, 'character',
+  'in.file', 'i', 1, 'character',
+  'out.file', 'o', 1, 'character',
+  'betabin.p', 'p', 1, 'double', 
+  'betabin.rho', 'r', 1, 'double', 
+  'n.bootstrap.samples', 'b', 1, 'integer',
+  'min.feat.vars', 'm', 1, 'integer',
+  'nmax.vars', 'x', 1, 'integer',
+  'lib.file', 'l', 1, 'character',
+  'help', 'h', 0, 'logical'
+), byrow=TRUE, ncol=4);
+opt = getopt(spec)
+
+usage <- function(spec){
+  cat(getopt(spec, command = 'geneiase', usage=TRUE));
+  cat(sprintf(" -t ase.type\n\tType of ASE to test for. Two values are allowed: 'static' or 'icd'."))
+  cat(sprintf(" -i in.file\n\tInput file, containing 4 (static) or 6 (icd) tab-separated columns: feautureID, snpID, alternative allele count, reference allele count, [null.betabin.p], treated alternative allele count, treated reference allele count.\n"))
+  cat(sprintf("\tThe null.betabin.p column is optional and can be used when detecting 'static' ASE to provide SNP-specific null probabilities reflecting mapping bias. If this column is set it over-rides the -p parameter, see below.\n"))
+  cat(sprintf(" -o out.file\n\tOutput file containing the resulting p-values for each feature along with test statistics. Default: sprintf('%%s.%%s', in.file, '[static|icd].gene.pval.tab')\n"))
+  cat(sprintf(" -p betabin.p\n\tBetabinomial probability of success for the null dist (p = alternative allele count / total allele count). Typically estimated from DNA data and <0.5 due to mapping bias. Default: 0.49\n"))
+  cat(sprintf(" -r betabin.rho\n\tBetabinomial correlation (overdispersion) parameter for the null dist. Typically estimated from DNA data. 0 implies an ordinary binomial and the greater value the more conservative test. Default: 0.012\n"))
+  cat(sprintf(" -b n.bootstrap.samples\n\tThe number of bootstrap samples (B) to be used to generate the null distribution. Default: 1e5\n"))
+  cat(sprintf(" -m min.feat.vars\n\tFeatures (typically genes) with less than min.feat.vars will be excluded from analysis. Default: 2\n"))
+  cat(sprintf(" -x nmax.vars\n\tFeatures (typically genes) with equal to and greater than nmax.vars will be compared against a null distribution based on nmax.vars. Default: 100\n"))
+  cat(sprintf(" -l lib.file\n\tLibrary file with required R functions. Default: [static|icd].lib.R residing in a subdir 'lib' relative to where this program was executed from.\n\n"))
+  q(status=1);
+}
+
+#Print usage if help flag set
+if(!is.null(opt[['help']])){
+  usage(spec)
+}
+
+#Error check that all required options were set
+if(is.null(opt[['ase.type']])){warning('Error: "t" is a required option'); usage(spec);}
+if(is.null(opt[['in.file']])){warning('Error: "i" is a required option'); usage(spec);}
+
+#Set defaults for optional options
+if(is.null(opt[['betabin.p']])){opt[['betabin.p']] = 0.49;}
+if(is.null(opt[['betabin.rho']])){opt[['betabin.rho']] = 0.012;}
+if(is.null(opt[['n.bootstrap.samples']])){opt[['n.bootstrap.samples']] = 1e5;}
+if(is.null(opt[['min.feat.vars']])){opt[['min.feat.vars']] = 2;}
+if(is.null(opt[['nmax.vars']])){opt[['nmax.vars']] = 100;}
+
+#Set default options specific for the ASE type.
+if(opt[['ase.type']] == 'static'){
+    if(is.null(opt[['out.file']])){opt[['out.file']] = paste(opt[['in.file']], '.static.gene.pval.tab', sep = '');}
+    if(is.null(opt[['lib.file']])){opt[['lib.file']] = file.path(scriptPath, '../lib', 'static.lib.R');}
+    method = 'wilson'
+}else{
+    if(opt[['ase.type']] == 'icd'){
+        if(is.null(opt[['out.file']])){opt[['out.file']] = paste(opt[['in.file']], '.icd.gene.pval.tab', sep = '');}
+        if(is.null(opt[['lib.file']])){opt[['lib.file']] = file.path(scriptPath, '../lib', 'icd.lib.R');}
+        method = 'or.dp'
+    }else{
+        warning('Error: Invalid value for option "t"'); usage(spec);
+    }
+}
+
+#Source fcn lib
+source(opt[['lib.file']], chdir = TRUE)
+
+main <- function(ase.type, in.file, pval.file, n.samples, min.het.vars, nmax.vars, betabin.p, betabin.rho, method){
+
+  #Print parameters
+  cat('Program parameters:\n')
+  cat(sprintf('-t: %s\n', ase.type))
+  cat(sprintf('-i: %s\n', in.file))
+  cat(sprintf('-o: %s\n', pval.file))
+  cat(sprintf('-p: %s\n', betabin.p))
+  cat(sprintf('-r: %s\n', betabin.rho))
+  cat(sprintf('-b: %s\n', n.samples))
+  cat(sprintf('-m: %s\n', min.het.vars))
+  cat(sprintf('-x: %s\n', nmax.vars))
+
+  #Read data from in.file
+  cat('Reading input data from file...\n')
+  vars.filt = read.data(in.file)
+  
+  #Filter on min.het.vars
+  vars.filt = min.vars.filter(vars.filt, min.het.vars)
+  
+  #Print input stats
+  n.feats = length(unique(vars.filt[, 'gene']))
+  cat(sprintf('Input: %i features (after filtered on -m %i)\n', n.feats, min.het.vars))
+
+  #Get p-value
+  cat('Calculating p-values for features...\n')
+  if(ase.type == 'static'){
+      pval.df = get.main.pval(vars.filt, method, n.samples, nmax.vars, betabin.rho, betabin.p)
+  }else{
+      pval.df = get.main.pval(vars.filt, method, n.samples, nmax.vars, betabin.rho)
+  }
+  
+  #Dump res to pval.file
+  cat('Writing results to file...\n')
+  sim = FALSE
+  if(length(grep('^class$', colnames(vars.filt))) > 0){
+    sim = TRUE
+  }  
+  dump.tab(pval.df, pval.file, sim = sim)  
+  cat('Completed.\n')
+}
+
+#Execute
+main(opt[['ase.type']], opt[['in.file']], opt[['out.file']], opt[['n.bootstrap.samples']], opt[['min.feat.vars']], opt[['nmax.vars']], opt[['betabin.p']], opt[['betabin.rho']], method)
