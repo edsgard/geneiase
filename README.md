@@ -51,7 +51,7 @@ geneiase -h
 ##### Input files
 Examples of how to format the input files you find in the directory 'test' as part of the code-bundle.
 
-####Output description
+#####Output description
  A test-statistica, s, is generated for each variant reflecting the effect-size (see <a href="http://www.nature.com/articles/srep21134">paper</a>). In a meta-analysis approach the effect sizes for all variants within a gene is combined. We provide several simple gene-wise measures based on the variant effect-sizes. The p-value is based on the Liptak-Stouffer method (column liptak.s) and the generation of a null distribution from resampling of a parametric model (see <a href="http://www.nature.com/articles/srep21134">paper</a>). The fields in the tab-separated output file are:
 - feat: FeatureID as specified in the input file (typically a gene identifier)
 - n.vars: Number of variants within the gene
