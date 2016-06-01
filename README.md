@@ -34,14 +34,13 @@ the program without needing to entering the directory where it resides or using 
 
 
 ###Running GeneiASE
+See **Test the installation** above for an example.
 
 #####Required arguments
 Only two arguments are required.<br>
  1. -t, followed by a string with the allowed values "static" or "icd", specifying if static or individual condition-dependent ASE is to be tested for.
  2. -i, followed by the input file name. The input file should contain tab-separated columns. In the case of static ASE there should be four columns: feautureID, snpID, alternative allele count, reference allele count, and in the case of icd-ASE there should be six columns: feautureID, snpID, Untreated alternative allele count, Untreated reference allele count, Treated alternative allele count, Treated reference allele count.
  
-See **Test the installation** above for an example.
-
 ##### Description of arguments
 For detailed help on each available argument run the program with the -h flag:
 ```Shell
