@@ -68,9 +68,9 @@ Examples of how to format the input files you find in the directory 'test' as pa
  2. Map reads (BAM)
  3. Quality control mapped reads, such as PCR duplicate removal
  4. Call variants (VCF)
- 5. Filter variants: Heterozygosity, read depth, and satisfying other mapping quality and variant calling criteria
-   5.2. Optional: Assess mapping bias for each variant and either use the mapping bias estimate of each variant in downstream analysis or filter out variants exhibiting mapping bias.
-   5.3. Optional: If there are several samples from the same individual, such as in the case of cd-ASE, filter out variants which differ between the samples.
+ 5. Filter variants on heterozygosity, read depth, and on satisfying other mapping quality and variant calling criteria.
+   1. Optional: Assess mapping bias for each variant and either use the mapping bias estimate of each variant in downstream analysis or filter out variants exhibiting mapping bias.
+   2. Optional: If there are several samples from the same individual, such as in the case of cd-ASE, filter out variants which differ between the samples.
  6. Annotate variants
  7. Filter on relevant annotation, such as within a gene or presence in dbSNP.
  8. Get allelic counts for filtered variants based on a pileup of mapped reads.
