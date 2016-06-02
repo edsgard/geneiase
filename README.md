@@ -66,7 +66,7 @@ Examples of how to format the input files you find in the directory 'test' as pa
  We are not aware of any pipeline that on a genome-wide scale is designed for the particular purpose of generating a table with allelic read counts. The generation of allelic counts starting from raw reads can be specific to sequencing technology and desired tools (such as choice of read mapping and variant calling software). However, to facilitate the generation of such a table we list a possible workflow below. 
  1. Quality control of reads, such as trimming (FASTQ)
  2. Map reads (BAM)
- 3. Quality control mapped reads, such as PCR duplicate removal
+ 3. Quality control of mapped reads, such as PCR duplicate removal
  4. Call variants (VCF)
  5. Filter variants on heterozygosity, read depth, and on satisfying other mapping quality and variant calling criteria.
    1. Optional: Assess mapping bias for each variant and either use the mapping bias estimate of each variant in downstream analysis or filter out variants exhibiting mapping bias.
